@@ -6,55 +6,77 @@
 //
 
 import SwiftUI
+import CoreImage
+import CoreImage.CIFilterBuiltins
 
-@available(iOS 15.0, *)
+/**
+ UIImage, which comes from UIKit. This is an extremely powerful image type capable of working with a variety of image types, including bitmaps (like PNG), vectors (like SVG), and even sequences that form an animation. UIImage is the standard image type for UIKit, and of the three it’s closest to SwiftUI’s Image type.
+
+ CGImage, which comes from Core Graphics. This is a simpler image type that is really just a two-dimensional array of pixels.
+
+ CIImage, which comes from Core Image. This stores all the information required to produce an image but doesn’t actually turn that into pixels unless it’s asked to. Apple calls CIImage “an image recipe” rather than an actual image.
+
+ There is some interoperability between the various image types:
+
+ We can create a UIImage from a CGImage, and create a CGImage from a UIImage.
+ We can create a CIImage from a UIImage and from a CGImage, and can create a CGImage from a CIImage.
+ We can create a SwiftUI Image from both a UIImage and a CGImage.
+ */
 struct ContentView: View {
-    @State private var blurAmount = 0.0 {
-        didSet { // won't trigger by slider
-            print("Never show \(blurAmount)")
-        }
-    }
-
-    @State private var showingConfirmation = false
-    @State private var backgroundColor = Color.white
+    @State private var image: Image? //can't apply Core Image filters
 
     var body: some View {
         VStack {
-            Circle()
-                .foregroundColor(.green)
-                .blur(radius: blurAmount)
-                .frame(width: 300, height: 300)
-                .background(backgroundColor)
-                .onTapGesture {
-                    showingConfirmation = true
-                }
-                .confirmationDialog("Change backgroud", isPresented: $showingConfirmation) {
-                    Button("Red") {backgroundColor = .red}
-                    Button("Blue") {backgroundColor = .blue}
-                    Button("Orange") {backgroundColor = .orange}
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("Select a new color")
-                }
-
-            Slider(value: $blurAmount, in: 0...10)
-
-            Button("Random Blue") {
-                blurAmount = Double.random(in: 0...20)
-            }
+            image?
+                .resizable()
+                .scaledToFit()
         }
-        .onChange(of: blurAmount) { newValue in
-            print("New value is \(newValue)")
+        .onAppear(perform: loadImage)
+    }
+
+    // convert UIImage to CoreImage
+    func loadImage() {
+        guard let inputImage = UIImage(named: "Shiba") else { return}
+        let beginImage = CIImage(image: inputImage)
+        let context = CIContext()
+        let currentFilter = CIFilter.sepiaTone()
+
+        //custom filter settings
+        currentFilter.inputImage = beginImage
+        let amount = 1.0
+        let inputKeys = currentFilter.inputKeys
+
+        if inputKeys.contains(kCIInputIntensityKey) {
+            currentFilter.setValue(amount * 1, forKey: kCIInputIntensityKey)
         }
+
+        if inputKeys.contains(kCIInputRadiusKey) {
+            currentFilter.setValue(amount * 100, forKey: kCIInputRadiusKey)
+        }
+
+        if inputKeys.contains(kCIInputScaleKey) {
+            currentFilter.setValue(amount * 100, forKey: kCIInputScaleKey)
+        }
+
+        // get a CIImage from our filter or exit if that fails
+        guard let outputImage = currentFilter.outputImage else { return }
+
+        // attempt to get a CGImage from our CIImage
+        if let cgimge = context.createCGImage(outputImage, from: outputImage.extent) {
+
+            // convert that to a UIImage
+            let uiImage = UIImage(cgImage: cgimge)
+
+            // and convert that to a SwiftUI image
+            image = Image(uiImage: uiImage)
+        }
+
+
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        if #available(iOS 15.0, *) {
-            ContentView()
-        } else {
-            Text("iOS 14.0")
-        }
+        ContentView()
     }
 }
