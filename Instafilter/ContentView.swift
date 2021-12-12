@@ -25,6 +25,7 @@ import CoreImage.CIFilterBuiltins
 struct ContentView: View {
     @State private var image: Image? //can't apply Core Image filters
     @State private var showingImagePicker = false
+    @State private var inputImage: UIImage?
 
     var body: some View {
         VStack {
@@ -38,8 +39,14 @@ struct ContentView: View {
         }
         .onAppear(perform: loadImage)
         .sheet(isPresented: $showingImagePicker) {
-            ImagePicker()
+            ImagePicker(image: $inputImage)
         }
+        .onChange(of: inputImage) { _ in loadInputImage()}
+    }
+
+    func loadInputImage() {
+        guard let inputImage = inputImage else { return }
+        image = Image(uiImage: inputImage)
     }
 
     // convert UIImage to CoreImage
