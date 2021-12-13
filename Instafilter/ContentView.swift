@@ -36,6 +36,12 @@ struct ContentView: View {
             Button("Select Image") {
                 showingImagePicker = true
             }
+
+            Button("Save Image") {
+                guard let inputImage = inputImage else { return }
+                let imageSaver = ImageSaver()
+                imageSaver.writeToPhotoAlbum(image: inputImage)
+            }
         }
         .onAppear(perform: loadImage)
         .sheet(isPresented: $showingImagePicker) {
@@ -47,6 +53,7 @@ struct ContentView: View {
     func loadInputImage() {
         guard let inputImage = inputImage else { return }
         image = Image(uiImage: inputImage)
+        UIImageWriteToSavedPhotosAlbum(inputImage, nil, nil,  nil)
     }
 
     // convert UIImage to CoreImage
