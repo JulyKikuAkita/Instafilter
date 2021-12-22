@@ -16,6 +16,23 @@ import SwiftUI
  - Finally, we gave our ImagePicker an @Binding property so that it can send changes back to a parent view.
  */
 struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
     //Rather than just pass the data down one level,
     //a better idea is to tell the coordinator what its parent is, so it can modify values there directly.
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
@@ -39,22 +56,5 @@ struct ImagePicker: UIViewControllerRepresentable {
                 }
             }
         }
-    }
-
-    @Binding var image: UIImage?
-
-    func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration()
-        config.filter = .images
-
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
     }
 }

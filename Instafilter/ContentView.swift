@@ -24,77 +24,82 @@ import CoreImage.CIFilterBuiltins
  */
 struct ContentView: View {
     @State private var image: Image? //can't apply Core Image filters
+    @State private var filterIntesity = 0.5
     @State private var showingImagePicker = false
-    @State private var inputImage: UIImage?
+    @State private var inputImage: UIImage? //pass to ImagePicker struct
+
+    @State private var currentFilter = CIFilter.sepiaTone()
+    let context = CIContext() //context is epensive to create //rederning CIImage to CGImage
 
     var body: some View {
-        VStack {
-            image?
-                .resizable()
-                .scaledToFit()
+        NavigationView {
+            VStack {
+                ZStack {
+                    Rectangle()
+                        .fill(.gray)
 
-            Button("Select Image") {
-                showingImagePicker = true
-            }
+                    Text("Tap to select a picture")
+                        .foregroundColor(.white)
+                        .font(.headline)
 
-            Button("Save Image") {
-                guard let inputImage = inputImage else { return }
-                let imageSaver = ImageSaver()
-                imageSaver.writeToPhotoAlbum(image: inputImage)
+                    image?
+                        .resizable()
+                        .scaledToFit()
+                }
+                .onTapGesture {
+                        showingImagePicker = true
+                }
+
+                HStack {
+                    Text("Intensity")
+                    Slider(value: $filterIntesity)
+                        .onChange(of: filterIntesity) { _ in applyProcessing() } //tracking change of slider intesity
+                }
+                .padding(.vertical)
+
+                HStack {
+                    Button("Change Filter") {
+                        // Save image
+                    }
+
+                    Spacer()
+
+                    Button("Save", action: save)
+                }
             }
         }
-        .onAppear(perform: loadImage)
+        .padding([.horizontal, .bottom])
+        .navigationTitle("Instafilter")
+        .onChange(of: inputImage) { _ in loadImage() } //tracking change of inputImage
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $inputImage)
         }
-        .onChange(of: inputImage) { _ in loadInputImage()}
     }
 
-    func loadInputImage() {
-        guard let inputImage = inputImage else { return }
-        image = Image(uiImage: inputImage)
-        UIImageWriteToSavedPhotosAlbum(inputImage, nil, nil,  nil)
-    }
-
-    // convert UIImage to CoreImage
     func loadImage() {
-        guard let inputImage = UIImage(named: "Shiba") else { return}
+        guard let inputImage = inputImage else { return }
+
         let beginImage = CIImage(image: inputImage)
-        let context = CIContext()
-        let currentFilter = CIFilter.sepiaTone()
+        // Note: prone to crash if use core image dedicated property - inputImage, use setValue() instead
+        currentFilter.setValue(beginImage, forKey: kCIInputImageKey)
+        applyProcessing()
+    }
 
-        //custom filter settings
-        currentFilter.inputImage = beginImage
-        let amount = 1.0
-        let inputKeys = currentFilter.inputKeys
+    func applyProcessing() {
+        currentFilter.intensity = Float(filterIntesity)
 
-        if inputKeys.contains(kCIInputIntensityKey) {
-            currentFilter.setValue(amount * 1, forKey: kCIInputIntensityKey)
-        }
-
-        if inputKeys.contains(kCIInputRadiusKey) {
-            currentFilter.setValue(amount * 100, forKey: kCIInputRadiusKey)
-        }
-
-        if inputKeys.contains(kCIInputScaleKey) {
-            currentFilter.setValue(amount * 100, forKey: kCIInputScaleKey)
-        }
-
-        // get a CIImage from our filter or exit if that fails
         guard let outputImage = currentFilter.outputImage else { return }
 
-        // attempt to get a CGImage from our CIImage
-        if let cgimge = context.createCGImage(outputImage, from: outputImage.extent) {
-
-            // convert that to a UIImage
-            let uiImage = UIImage(cgImage: cgimge)
-
-            // and convert that to a SwiftUI image
+        if let cgimg = context.createCGImage(outputImage, from: outputImage.extent) {
+            let uiImage = UIImage(cgImage: cgimg)
             image = Image(uiImage: uiImage)
         }
+    }
 
+    func save() {
 
     }
+
 }
 
 struct ContentView_Previews: PreviewProvider {
