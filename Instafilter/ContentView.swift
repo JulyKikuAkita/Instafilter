@@ -26,8 +26,9 @@ struct ContentView: View {
     @State private var image: Image? //can't apply Core Image filters
     @State private var filterIntesity = 0.5
     @State private var showingImagePicker = false
-    @State private var inputImage: UIImage? //pass to ImagePicker struct
+    @State private var inputImage: UIImage? //pass to ImagePicker
     @State private var showingFilterSheet = false
+    @State private var processedImage: UIImage? //pass to ImageSaver
 
 
     @State private var currentFilter: CIFilter = CIFilter.sepiaTone() // check protocol CISepiaTone
@@ -36,13 +37,12 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             VStack {
+                Text("Tap Gray box to select a picture")
+                    .font(.headline)
+
                 ZStack {
                     Rectangle()
                         .fill(.gray)
-
-                    Text("Tap to select a picture")
-                        .foregroundColor(.white)
-                        .font(.headline)
 
                     image?
                         .resizable()
@@ -122,13 +122,24 @@ struct ContentView: View {
         if let cgimg = context.createCGImage(outputImage, from: outputImage.extent) {
             let uiImage = UIImage(cgImage: cgimg)
             image = Image(uiImage: uiImage)
+            processedImage = uiImage
         }
     }
 
     func save() {
+        guard let processedImage = processedImage else { return }
 
+        let imageSaver = ImageSaver()
+        imageSaver.successHandler = {
+            print("Success save filter image")
+        }
+
+        imageSaver.errorHandler = {
+            print("Oops: \($0.localizedDescription)")
+        }
+
+        imageSaver.writeToPhotoAlbum(image: processedImage)
     }
-
 }
 
 struct ContentView_Previews: PreviewProvider {
