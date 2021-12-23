@@ -21,6 +21,11 @@ import CoreImage.CIFilterBuiltins
  We can create a UIImage from a CGImage, and create a CGImage from a UIImage.
  We can create a CIImage from a UIImage and from a CGImage, and can create a CGImage from a CIImage.
  We can create a SwiftUI Image from both a UIImage and a CGImage.
+
+ CHALLENGES:
+ 1. Try making the Save button disabled if there is no image in the image view.
+ 2. Experiment with having more than one slider, to control each of the input keys you care about. For example, you might have one for radius and one for intensity.
+ 3. Explore the range of available Core Image filters, and add any three of your choosing to the app. (Tip: That last one might be a little trickier than you expect. Why? Maybe have a think about it for 10 seconds!)
  */
 struct ContentView: View {
     @State private var image: Image? //can't apply Core Image filters
@@ -29,9 +34,10 @@ struct ContentView: View {
     @State private var inputImage: UIImage? //pass to ImagePicker
     @State private var showingFilterSheet = false
     @State private var processedImage: UIImage? //pass to ImageSaver
-
-
     @State private var currentFilter: CIFilter = CIFilter.sepiaTone() // check protocol CISepiaTone
+    @State private var filterRadius = 10.0
+    @State private var filterName = "Change Filter"
+
     let context = CIContext() //context is epensive to create //rederning CIImage to CGImage
 
     var body: some View {
@@ -52,21 +58,26 @@ struct ContentView: View {
                         showingImagePicker = true
                 }
 
-                HStack {
+                VStack {
                     Text("Intensity")
                     Slider(value: $filterIntesity)
                         .onChange(of: filterIntesity) { _ in applyProcessing() } //tracking change of slider intesity
+
+                    Text("Radius")
+                    Slider(value: $filterRadius, in: 0...100)
+                        .onChange(of: filterRadius) { _ in applyProcessing() }
                 }
-                .padding(.vertical)
+                .padding()
 
                 HStack {
-                    Button("Change Filter") {
+                    Button(filterName) {
                         showingFilterSheet = true
                     }
 
                     Spacer()
 
                     Button("Save", action: save)
+                        .disabled(processedImage == nil)
                 }
             }
         }
@@ -76,7 +87,7 @@ struct ContentView: View {
         .sheet(isPresented: $showingImagePicker) {
             ImagePicker(image: $inputImage)
         }
-        .confirmationDialog("Select a filter", isPresented: $showingFilterSheet) {
+        .confirmationDialog("Select a filter", isPresented: $showingFilterSheet) { //not abel to take more than 10 buttons
             Button("Crystallize") { setFilter(CIFilter.crystallize()) }
             Button("Edges") { setFilter(CIFilter.edges()) }
             Button("Gaussian Blur") { setFilter(CIFilter.gaussianBlur()) }
@@ -85,11 +96,14 @@ struct ContentView: View {
             Button("Unsharp Mask") { setFilter(CIFilter.unsharpMask()) }
             Button("Vignette") { setFilter(CIFilter.vignette()) }
             Button("Line Overlay") { setFilter(CIFilter.lineOverlay()) }
+//            Button("Vibrance") { setFilter(CIFilter.vibrance()) }
+                Button("Hue Blend") { setFilter(CIFilter.hueBlendMode()) }
             Button("Cancel", role: .cancel) { }
         } // refer to https://developer.apple.com/library/archive/documentation/GraphicsImaging/Reference/CoreImageFilterReference/index.html
     }
 
     func setFilter(_ filter: CIFilter) {
+        filterName = filter.name
         currentFilter = filter
         loadImage()
     }
@@ -110,7 +124,7 @@ struct ContentView: View {
         }
 
         if inputKeys.contains(kCIInputRadiusKey) {
-            currentFilter.setValue(filterIntesity * 200, forKey: kCIInputRadiusKey)
+            currentFilter.setValue(filterRadius, forKey: kCIInputRadiusKey)
         }
 
         if inputKeys.contains(kCIInputScaleKey) {
